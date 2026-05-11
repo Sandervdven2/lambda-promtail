@@ -4,3 +4,5 @@ main
 pkg/bootstrap
 pkg/*.zip
 *.zip
+.DS_Store
+bootstrap

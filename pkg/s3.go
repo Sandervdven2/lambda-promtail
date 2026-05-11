@@ -33,6 +33,14 @@ type parserConfig struct {
 	filenameRegex *regexp.Regexp
 	// regex that extracts the timestamp from the log sample
 	timestampRegex *regexp.Regexp
+	// regex that extracts the type of logline from the log sample
+	typeRegex *regexp.Regexp
+	// regex that extracts the stream of logline from the log sample
+	streamRegex *regexp.Regexp
+	// regex that extracts the stream of logline from the log sample
+	podNameRegex *regexp.Regexp
+	// regex that extracts the pod name of logline from the log sample
+	podRegex *regexp.Regexp
 	// time format to use to convert the timestamp to time.Time
 	timestampFormat string
 	// if the timestamp is a string that can be parsed or a Unix timestamp
@@ -55,6 +63,7 @@ const (
 	GuardDutyLogType        string = "GuardDuty"
 	MskLogType              string = "KafkaBrokerLogs"
 	S3AccessLogType         string = "S3AccessLogs"
+	Custom_LOG_TYPE         string = "CustomLogs"
 )
 
 var (
@@ -104,7 +113,13 @@ var (
 	mskTimestampRegex         = regexp.MustCompile(`^\[(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\]`)
 	s3AccessLogFilenameRegex  = regexp.MustCompile(`(?P<account_id>\d+)\/(?P<region>[\w-]+)\/(?P<src>[a-zA-Z0-9\-]+)\/(?P<year>\d+)\/(?P<month>\d+)\/(?P<day>\d+)\/[a-zA-Z0-9\-]+$`)
 	s3AccessLogTimestampRegex = regexp.MustCompile(`\[(?P<timestamp>\d+\/\w+\/\d+:\d+:\d+:\d+ [\+-]\d+)\]`)
-	parsers                   = map[string]parserConfig{
+	customFilenameRegex       = regexp.MustCompile(`logs/*`)
+	customTimestampRegex      = regexp.MustCompile(`"timestamp":\s*(?P<timestamp>\d+)`)
+	customLogstreamTypeRegex  = regexp.MustCompile(`"logStream":"([^"]+)"|"stream":"([^"]+)"`)
+	customStreamTypeRegex     = regexp.MustCompile(`"stream":"([^"]+)"`)
+	customPodNameRegex        = regexp.MustCompile(`"pod_name":"([^"]+)"`)
+
+	parsers = map[string]parserConfig{
 		FlowLogType: {
 			logTypeLabel:    "s3_vpc_flow",
 			filenameRegex:   defaultFilenameRegex,
@@ -168,6 +183,16 @@ var (
 			timestampFormat: "02/Jan/2006:15:04:05 -0700",
 			timestampRegex:  s3AccessLogTimestampRegex,
 			timestampType:   "string",
+		},
+		Custom_LOG_TYPE: {
+			logTypeLabel:   "s3_custom",
+			filenameRegex:  customFilenameRegex,
+			ownerLabelKey:  "prefix",
+			timestampRegex: customTimestampRegex,
+			timestampType:  "unix",
+			typeRegex:      customLogstreamTypeRegex,
+			streamRegex:    customStreamTypeRegex,
+			podNameRegex:   customPodNameRegex,
 		},
 	}
 )
@@ -251,6 +276,38 @@ func parseS3Log(ctx context.Context, b *batch, labels map[string]string, obj io.
 		if printLogLine {
 			fmt.Println(logLine)
 		}
+
+		var logStreamRegexResult string = "undefined"
+
+		logStreamtypeMatch := parser.typeRegex.FindStringSubmatch(logLine)
+		if len(logStreamtypeMatch) > 0 {
+			logStreamRegexResult = logStreamtypeMatch[1]
+			//level.Warn(*log).Log("msg", fmt.Sprintf("logStream type of %s,", logStream))
+		}
+
+		var streamRegexResult string = "undefined"
+
+		streamtypeMatch := parser.streamRegex.FindStringSubmatch(logLine)
+		if len(streamtypeMatch) > 0 {
+			streamRegexResult = streamtypeMatch[1]
+			//level.Warn(*log).Log("msg", fmt.Sprintf("logStream type of %s,", logStream))
+		}
+
+		var podNameResult string = "undefined"
+		podNameMatch := parser.podNameRegex.FindStringSubmatch(logLine)
+		if len(podNameMatch) > 0 {
+			podNameResult = podNameMatch[1]
+			//level.Warn(*log).Log("msg", fmt.Sprintf("logStream type of %s,", logStream))
+		}
+
+		labelset := model.LabelSet{
+			model.LabelName("logStream"): model.LabelValue(logStreamRegexResult),
+			model.LabelName("stream"):    model.LabelValue(streamRegexResult),
+			model.LabelName("pod_name"):  model.LabelValue(podNameResult),
+		}
+		//labelset[model.LabelName("stream")] = model.LabelValue(labels["stream"])
+
+		labelset = applyLabels(labelset)
 
 		timestamp := time.Now()
 		match := parser.timestampRegex.FindStringSubmatch(logLine)
@@ -350,6 +407,7 @@ func processS3Event(ctx context.Context, ev *events.S3Event, pc Client, processi
 		}
 	}
 
+	level.Info(*log).Log("msg", fmt.Sprintf("before sending logs May 2026"))
 	err = pc.sendToPromtail(ctx, batch)
 	if err != nil {
 		return err
