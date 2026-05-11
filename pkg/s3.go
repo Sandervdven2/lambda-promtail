@@ -290,7 +290,7 @@ func parseS3Log(ctx context.Context, b *batch, labels map[string]string, obj io.
 		streamtypeMatch := parser.streamRegex.FindStringSubmatch(logLine)
 		if len(streamtypeMatch) > 0 {
 			streamRegexResult = streamtypeMatch[1]
-			//level.Warn(*log).Log("msg", fmt.Sprintf("logStream type of %s,", logStream))
+			//level.Warn(*log).Log("msg", fmt.Sprintf("streamRegexResult type of %s,", streamRegexResult))
 		}
 
 		var podNameResult string = "undefined"
@@ -305,7 +305,6 @@ func parseS3Log(ctx context.Context, b *batch, labels map[string]string, obj io.
 			model.LabelName("stream"):    model.LabelValue(streamRegexResult),
 			model.LabelName("pod_name"):  model.LabelValue(podNameResult),
 		}
-		//labelset[model.LabelName("stream")] = model.LabelValue(labels["stream"])
 
 		labelset = applyLabels(labelset)
 
@@ -337,7 +336,7 @@ func parseS3Log(ctx context.Context, b *batch, labels map[string]string, obj io.
 			}
 		}
 
-		if err := b.add(ctx, entry{ls, logproto.Entry{
+		if err := b.add(ctx, entry{labelset, logproto.Entry{
 			Line:      logLine,
 			Timestamp: timestamp,
 		}}); err != nil {
