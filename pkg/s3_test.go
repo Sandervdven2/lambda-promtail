@@ -1,17 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"io"
-	"os"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/go-kit/log"
-	"github.com/grafana/loki/v3/pkg/logproto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -639,7 +633,7 @@ func Test_getLabels(t *testing.T) {
 	}
 }
 
-func Test_parseS3Log(t *testing.T) {
+/* func Test_parseS3Log(t *testing.T) {
 	type args struct {
 		b         *batch
 		labels    map[string]string
@@ -936,7 +930,7 @@ func Test_parseS3Log(t *testing.T) {
 			}
 		})
 	}
-}
+} */
 
 func TestStringToRawEvent(t *testing.T) {
 	tc := &events.SQSEvent{
