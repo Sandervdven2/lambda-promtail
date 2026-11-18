@@ -63,7 +63,7 @@ const (
 	GuardDutyLogType        string = "GuardDuty"
 	MskLogType              string = "KafkaBrokerLogs"
 	S3AccessLogType         string = "S3AccessLogs"
-	Custom_LOG_TYPE         string = "CustomLogs"
+	CustomLogType           string = "CustomLogs"
 )
 
 var (
@@ -184,7 +184,7 @@ var (
 			timestampRegex:  s3AccessLogTimestampRegex,
 			timestampType:   "string",
 		},
-		Custom_LOG_TYPE: {
+		CustomLogType: {
 			logTypeLabel:   "s3_custom",
 			filenameRegex:  customFilenameRegex,
 			ownerLabelKey:  "prefix",
@@ -277,7 +277,7 @@ func parseS3Log(ctx context.Context, b *batch, labels map[string]string, obj io.
 			fmt.Println(logLine)
 		}
 
-		var logStreamRegexResult string = "undefined"
+		var logStreamRegexResult = "undefined"
 
 		logStreamtypeMatch := parser.typeRegex.FindStringSubmatch(logLine)
 		if len(logStreamtypeMatch) > 0 {
@@ -285,7 +285,7 @@ func parseS3Log(ctx context.Context, b *batch, labels map[string]string, obj io.
 			//level.Warn(*log).Log("msg", fmt.Sprintf("logStream type of %s,", logStream))
 		}
 
-		var streamRegexResult string = "undefined"
+		var streamRegexResult = "undefined"
 
 		streamtypeMatch := parser.streamRegex.FindStringSubmatch(logLine)
 		if len(streamtypeMatch) > 0 {
@@ -293,7 +293,7 @@ func parseS3Log(ctx context.Context, b *batch, labels map[string]string, obj io.
 			//level.Warn(*log).Log("msg", fmt.Sprintf("streamRegexResult type of %s,", streamRegexResult))
 		}
 
-		var podNameResult string = "undefined"
+		var podNameResult = "undefined"
 		podNameMatch := parser.podNameRegex.FindStringSubmatch(logLine)
 		if len(podNameMatch) > 0 {
 			podNameResult = podNameMatch[1]
@@ -406,7 +406,7 @@ func processS3Event(ctx context.Context, ev *events.S3Event, pc Client, processi
 		}
 	}
 
-	level.Info(*log).Log("msg", fmt.Sprintf("before sending logs May 2026"))
+	//level.Info(*log).Log("msg", fmt.Sprintf("before sending logs May 2026"))
 	err = pc.sendToPromtail(ctx, batch)
 	if err != nil {
 		return err
